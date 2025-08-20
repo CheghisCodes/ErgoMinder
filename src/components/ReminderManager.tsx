@@ -152,7 +152,7 @@ export default function ReminderManager() {
         );
       }
     },
-    [reminders, toast, soundEnabled]
+    [reminders, toast, playSound]
   );
 
   useEffect(() => {
@@ -209,7 +209,7 @@ export default function ReminderManager() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [pomodoroState, toast, soundEnabled]);
+  }, [pomodoroState, toast, playSound]);
 
   const handleToggle = (id: string, checked: boolean) => {
     setReminders((prev) =>
@@ -345,6 +345,11 @@ export default function ReminderManager() {
               onCheckedChange={setSoundEnabled}
             />
           </div>
+        </div>
+
+        <Separator />
+
+        <div>
           <Button
             variant="outline"
             size="sm"
