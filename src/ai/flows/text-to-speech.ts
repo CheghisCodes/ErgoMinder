@@ -12,7 +12,6 @@ import wav from 'wav';
 import { z } from 'zod';
 
 const TextToSpeechInputSchema = z.string();
-type TextToSpeechInput = z.infer<typeof TextToSpeechInputSchema>;
 
 const TextToSpeechOutputSchema = z.object({
   audioDataUri: z.string().describe('The generated audio as a data URI.'),
@@ -20,7 +19,7 @@ const TextToSpeechOutputSchema = z.object({
 type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;
 
 export async function textToSpeech(
-  input: TextToSpeechInput
+  input: string
 ): Promise<TextToSpeechOutput> {
   return textToSpeechFlow(input);
 }
@@ -64,8 +63,21 @@ const textToSpeechFlow = ai.defineFlow(
       config: {
         responseModalities: ['AUDIO'],
         speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+          multiSpeakerVoiceConfig: {
+            speakerVoiceConfigs: [
+              {
+                speaker: 'Ergo',
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: 'Algenib' },
+                },
+              },
+              {
+                speaker: 'Minder',
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: 'Achernar' },
+                },
+              },
+            ],
           },
         },
       },
