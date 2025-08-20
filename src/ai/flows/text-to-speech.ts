@@ -10,7 +10,6 @@
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'zod';
-import wav from 'wav';
 
 const TextToSpeechInputSchema = z.object({
   text: z.string().describe('The text to be converted to speech.'),
@@ -21,7 +20,7 @@ const TextToSpeechOutputSchema = z.object({
   audioDataUri: z
     .string()
     .describe(
-      "The generated speech as a data URI. Expected format: 'data:audio/wav;base64,<encoded_data>'."
+      "The generated speech as a data URI. Expected format: 'data:audio/mp3;base64,<encoded_data>'."
     ),
 });
 type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;
@@ -30,32 +29,6 @@ export async function textToSpeech(
   input: TextToSpeechInput
 ): Promise<TextToSpeechOutput> {
   return textToSpeechFlow(input);
-}
-
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    const bufs: any[] = [];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.end(pcmData);
-  });
 }
 
 const textToSpeechFlow = ai.defineFlow(
@@ -81,15 +54,10 @@ const textToSpeechFlow = ai.defineFlow(
     if (!media || !media.url) {
       throw new Error('No media returned from TTS model.');
     }
-
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const wavBase64 = await toWav(audioBuffer);
-
+    
+    // The model returns audio data that can be used directly.
     return {
-      audioDataUri: 'data:audio/wav;base64,' + wavBase64,
+      audioDataUri: media.url,
     };
   }
 );
