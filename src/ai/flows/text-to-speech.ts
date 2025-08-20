@@ -45,7 +45,7 @@ async function toWav(
       bitDepth: sampleWidth * 8,
     });
 
-    let bufs: any[] = [];
+    const bufs: any[] = [];
     writer.on('error', reject);
     writer.on('data', function (d) {
       bufs.push(d);
@@ -54,8 +54,7 @@ async function toWav(
       resolve(Buffer.concat(bufs).toString('base64'));
     });
 
-    writer.write(pcmData);
-    writer.end();
+    writer.end(pcmData);
   });
 }
 
