@@ -4,14 +4,12 @@
  * @fileOverview Converts text to speech using a Genkit flow.
  *
  * - textToSpeech - The function that converts text into audio data.
- * - TextToSpeechInput - The input type for the textToSpeech function.
- * - TextToSpeechOutput - The output type for the textToSpeech function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-import wav from 'wav';
 import { googleAI } from '@genkit-ai/googleai';
+import wav from 'wav';
+import { z } from 'zod';
 
 const TextToSpeechInputSchema = z.string();
 type TextToSpeechInput = z.infer<typeof TextToSpeechInputSchema>;
@@ -62,7 +60,7 @@ const textToSpeechFlow = ai.defineFlow(
   },
   async (text) => {
     const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-preview-tts'),
+      model: googleAI.model('gemini-1.5-flash-tts'),
       config: {
         responseModalities: ['AUDIO'],
         speechConfig: {
