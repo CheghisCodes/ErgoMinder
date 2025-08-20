@@ -18,7 +18,7 @@ const AnalyzePostureInputSchema = z.object({
       "A photo of the user's posture, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
-export type AnalyzePostureInput = z.infer<typeof AnalyzePostureInputSchema>;
+type AnalyzePostureInput = z.infer<typeof AnalyzePostureInputSchema>;
 
 const AnalyzePostureOutputSchema = z.object({
   postureAnalysis: z
@@ -28,7 +28,7 @@ const AnalyzePostureOutputSchema = z.object({
     .string()
     .describe('Personalized stretch recommendations based on the posture analysis.'),
 });
-export type AnalyzePostureOutput = z.infer<typeof AnalyzePostureOutputSchema>;
+type AnalyzePostureOutput = z.infer<typeof AnalyzePostureOutputSchema>;
 
 export async function analyzePosture(input: AnalyzePostureInput): Promise<AnalyzePostureOutput> {
   return analyzePostureFlow(input);

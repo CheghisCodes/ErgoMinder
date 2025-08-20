@@ -1,12 +1,16 @@
 "use server";
 import {
   analyzePosture as analyzePostureFlow,
-  type AnalyzePostureInput,
 } from "@/ai/flows/analyze-posture";
 import {
   textToSpeech as textToSpeechFlow,
-  type TextToSpeechInput,
 } from "@/ai/flows/text-to-speech";
+
+// Define types locally since they are not exported from the 'use server' files
+type AnalyzePostureInput = {
+  photoDataUri: string;
+};
+type TextToSpeechInput = string;
 
 
 export async function analyzePostureAction(input: AnalyzePostureInput) {
