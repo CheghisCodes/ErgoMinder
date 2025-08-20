@@ -1,7 +1,6 @@
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
-import { textToSpeechAction } from "@/lib/actions";
 import { motivationalQuotes } from "@/lib/constants";
 import {
   Clock,
@@ -13,7 +12,6 @@ import {
   Play,
   RotateCcw,
   Volume2,
-  VolumeX,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,7 +42,6 @@ type Reminder = {
   icon: LucideIcon;
   toastTitle: string;
   toastDescription: string;
-  speechText: string;
   enabled: boolean;
   frequency: number; // in minutes
   frequencies: number[];
@@ -60,7 +57,6 @@ const initialReminders: Reminder[] = [
     icon: Eye,
     toastTitle: "Time for an eye break! 👀",
     toastDescription: "Look at something 20 feet away for 20 seconds.",
-    speechText: "It's time for an eye break. Look away from your screen.",
     enabled: true,
     frequency: 20,
     frequencies: [15, 20, 25, 30],
@@ -74,7 +70,6 @@ const initialReminders: Reminder[] = [
     icon: PersonStanding,
     toastTitle: "Move your body! 🏃",
     toastDescription: "Take a short micro-break to stretch and recharge.",
-    speechText: "Time for a micro-break. Stand up and stretch.",
     enabled: true,
     frequency: 30,
     frequencies: [30, 45, 60],
@@ -88,7 +83,6 @@ const initialReminders: Reminder[] = [
     icon: GlassWater,
     toastTitle: "Stay hydrated! 💧",
     toastDescription: "Time to drink some water.",
-    speechText: "Stay hydrated. It is time to drink some water.",
     enabled: true,
     frequency: 60,
     frequencies: [45, 60, 90],
@@ -102,7 +96,6 @@ const initialReminders: Reminder[] = [
     icon: Grape,
     toastTitle: "Snack time! 🍎",
     toastDescription: "A healthy snack can boost your productivity.",
-    speechText: "It's snack time. Grab a healthy snack to keep your energy up.",
     enabled: false,
     frequency: 120,
     frequencies: [90, 120, 180],
@@ -123,11 +116,9 @@ export default function ReminderManager() {
     POMODORO_WORK_MINS * 60
   );
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [speechEnabled, setSpeechEnabled] = useState(true);
 
   const { toast } = useToast();
   const alertAudioRef = useRef<HTMLAudioElement | null>(null);
-  const speechAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     // Initialize Audio on the client side
@@ -136,9 +127,6 @@ export default function ReminderManager() {
         "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
       );
       alertAudioRef.current.volume = 0.5;
-
-      speechAudioRef.current = new Audio();
-      speechAudioRef.current.volume = 1.0;
     }
   }, []);
 
@@ -149,24 +137,11 @@ export default function ReminderManager() {
     }
   };
 
-  const speakText = async (text: string) => {
-    if (speechEnabled && speechAudioRef.current) {
-      try {
-        const { audioDataUri } = await textToSpeechAction(text);
-        speechAudioRef.current.src = audioDataUri;
-        speechAudioRef.current.play().catch((e) => console.error("Error playing speech:", e));
-      } catch (error) {
-        console.error("Error generating speech:", error);
-      }
-    }
-  };
-
   const triggerReminder = useCallback(
     (id: string) => {
       const reminder = reminders.find((r) => r.id === id);
       if (reminder && reminder.enabled) {
         playSound();
-        speakText(reminder.speechText);
         toast({
           title: reminder.toastTitle,
           description: reminder.toastDescription,
@@ -178,7 +153,7 @@ export default function ReminderManager() {
         );
       }
     },
-    [reminders, toast, soundEnabled, speechEnabled]
+    [reminders, toast, soundEnabled]
   );
 
   useEffect(() => {
@@ -221,15 +196,11 @@ export default function ReminderManager() {
           playSound();
           if (pomodoroState === "work") {
             const toastTitle = "Pomodoro: Break Time! 🎉";
-            const speechText = "Pomodoro complete. Time for a short break. Take rest.";
-            speakText(speechText);
             toast({ title: toastTitle, description: getRandomQuote() });
             setPomodoroState("break");
             return POMODORO_BREAK_MINS * 60;
           } else {
             const toastTitle = "Pomodoro: Focus Time! 🚀";
-            const speechText = "Break is over. Time to focus.";
-            speakText(speechText);
             toast({ title: toastTitle, description: getRandomQuote() });
             setPomodoroState("work");
             return POMODORO_WORK_MINS * 60;
@@ -240,7 +211,7 @@ export default function ReminderManager() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [pomodoroState, toast, soundEnabled, speechEnabled]);
+  }, [pomodoroState, toast, soundEnabled]);
 
   const handleToggle = (id: string, checked: boolean) => {
     setReminders((prev) =>
@@ -271,8 +242,6 @@ export default function ReminderManager() {
   const handlePomodoroToggle = () => {
     if (pomodoroState === "idle") {
       const toastTitle = "Pomodoro: Focus Time! 🚀";
-      const speechText = "Pomodoro started. Time to focus.";
-      speakText(speechText);
       toast({ title: toastTitle, description: getRandomQuote() });
       setPomodoroState("work");
       setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
@@ -366,17 +335,6 @@ export default function ReminderManager() {
               id="sound-toggle"
               checked={soundEnabled}
               onCheckedChange={setSoundEnabled}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="speech-toggle" className="flex items-center gap-2">
-              <VolumeX className="h-5 w-5" />
-              <span className="font-bold">Enable Spoken Alerts</span>
-            </Label>
-            <Switch
-              id="speech-toggle"
-              checked={speechEnabled}
-              onCheckedChange={setSpeechEnabled}
             />
           </div>
         </div>
