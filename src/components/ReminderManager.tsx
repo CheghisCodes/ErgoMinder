@@ -1,10 +1,20 @@
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Eye, GlassWater, PersonStanding } from "lucide-react";
+import {
+  Clock,
+  Eye,
+  GlassWater,
+  PersonStanding,
+  Grape,
+  Play,
+  Pause,
+  RotateCcw,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Label } from "./ui/label";
 import { Progress } from "./ui/progress";
 import {
@@ -14,10 +24,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { Separator } from "./ui/separator";
 import { Switch } from "./ui/switch";
 
 type Reminder = {
-  id: "eye" | "micro" | "hydration";
+  id: "eye" | "micro" | "hydration" | "snack";
   title: string;
   description: string;
   icon: LucideIcon;
@@ -70,16 +81,59 @@ const initialReminders: Reminder[] = [
     progress: 0,
     lastTriggered: Date.now(),
   },
+  {
+    id: "snack",
+    title: "Snack Break",
+    description: "Grab a healthy snack to keep your energy levels up.",
+    icon: Grape,
+    toastTitle: "Snack time! 🍎",
+    toastDescription: "A healthy snack can boost your productivity.",
+    enabled: false,
+    frequency: 120,
+    frequencies: [90, 120, 180],
+    progress: 0,
+    lastTriggered: Date.now(),
+  },
 ];
+
+const POMODORO_WORK_MINS = 25;
+const POMODORO_BREAK_MINS = 5;
+
+type PomodoroState = "idle" | "work" | "break";
 
 export default function ReminderManager() {
   const [reminders, setReminders] = useState<Reminder[]>(initialReminders);
+  const [pomodoroState, setPomodoroState] = useState<PomodoroState>("idle");
+  const [pomodoroTimeLeft, setPomodoroTimeLeft] = useState(
+    POMODORO_WORK_MINS * 60
+  );
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
   const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Initialize Audio on the client side
+    if (typeof window !== "undefined") {
+      audioRef.current = new Audio(
+        "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+      );
+      audioRef.current.volume = 0.5;
+    }
+  }, []);
+  
+  const playSound = () => {
+    if (soundEnabled && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(e => console.error("Error playing sound:", e));
+    }
+  };
 
   const triggerReminder = useCallback(
     (id: string) => {
       const reminder = reminders.find((r) => r.id === id);
       if (reminder && reminder.enabled) {
+        playSound();
         toast({
           title: reminder.toastTitle,
           description: reminder.toastDescription,
@@ -91,7 +145,7 @@ export default function ReminderManager() {
         );
       }
     },
-    [reminders, toast]
+    [reminders, toast, soundEnabled]
   );
 
   useEffect(() => {
@@ -107,17 +161,41 @@ export default function ReminderManager() {
 
           if (elapsedTime >= frequencyMs) {
             triggerReminder(r.id);
-            // This will be updated inside triggerReminder's setReminders call
             return { ...r, progress: 100 };
           }
 
           return { ...r, progress };
         })
       );
-    }, 1000); // Update progress every second
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [reminders, triggerReminder]);
+
+  useEffect(() => {
+    if (pomodoroState === "idle") return;
+
+    const timer = setInterval(() => {
+      setPomodoroTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          playSound();
+          if (pomodoroState === "work") {
+            setPomodoroState("break");
+            toast({ title: "Pomodoro: Break Time!", description: `Time to take a ${POMODORO_BREAK_MINS}-minute break.` });
+            return POMODORO_BREAK_MINS * 60;
+          } else {
+            setPomodoroState("work");
+            toast({ title: "Pomodoro: Work Time!", description: `Time for a ${POMODORO_WORK_MINS}-minute focused session.` });
+            return POMODORO_WORK_MINS * 60;
+          }
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [pomodoroState, toast, soundEnabled]);
+
 
   const handleToggle = (id: string, checked: boolean) => {
     setReminders((prev) =>
@@ -145,57 +223,132 @@ export default function ReminderManager() {
     );
   };
 
+  const handlePomodoroToggle = () => {
+    if (pomodoroState === 'idle') {
+      setPomodoroState('work');
+      setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
+    } else {
+      setPomodoroState('idle');
+      setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
+    }
+  };
+  
+  const handlePomodoroReset = () => {
+    setPomodoroState('idle');
+    setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const getPomodoroProgress = () => {
+    const totalDuration = (pomodoroState === 'work' ? POMODORO_WORK_MINS : POMODORO_BREAK_MINS) * 60;
+    return ((totalDuration - pomodoroTimeLeft) / totalDuration) * 100;
+  };
+
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 font-headline">
           <Clock className="h-5 w-5 text-primary" />
-          Customizable Reminders
+          Wellness Reminders
         </CardTitle>
+        <CardDescription>Customize your reminders to stay healthy and productive.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-8">
-        {reminders.map((reminder) => (
-          <div key={reminder.id} className="space-y-4">
-            <div className="flex items-start gap-4">
-              <reminder.icon className="h-6 w-6 text-accent mt-1" />
-              <div className="flex-1">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor={`switch-${reminder.id}`} className="font-bold text-lg">
-                    {reminder.title}
-                  </Label>
-                  <Switch
-                    id={`switch-${reminder.id}`}
-                    checked={reminder.enabled}
-                    onCheckedChange={(checked) => handleToggle(reminder.id, checked)}
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {reminder.description}
-                </p>
-                <div className="flex items-center gap-4 mt-4">
-                  <Label htmlFor={`select-${reminder.id}`} className="text-sm">Frequency:</Label>
-                  <Select
-                    value={String(reminder.frequency)}
-                    onValueChange={(value) => handleFrequencyChange(reminder.id, value)}
-                    disabled={!reminder.enabled}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Set frequency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reminder.frequencies.map((freq) => (
-                        <SelectItem key={freq} value={String(freq)}>
-                          Every {freq} minutes
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+      <CardContent className="space-y-6">
+        <div className="space-y-4 p-4 rounded-lg bg-muted/50">
+           <div className="flex justify-between items-center">
+             <div className="flex-1">
+              <Label htmlFor="pomodoro-toggle" className="font-bold text-lg">
+                Pomodoro Timer
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {POMODORO_WORK_MINS} min work, {POMODORO_BREAK_MINS} min break sessions.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="icon" variant="outline" onClick={handlePomodoroToggle}>
+                {pomodoroState === 'idle' ? <Play className="h-4 w-4"/> : <Pause className="h-4 w-4"/>}
+              </Button>
+               <Button size="icon" variant="ghost" onClick={handlePomodoroReset}>
+                <RotateCcw className="h-4 w-4"/>
+              </Button>
+            </div>
+          </div>
+          {pomodoroState !== 'idle' && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-medium">
+                <span className="text-primary">{pomodoroState === 'work' ? 'Work' : 'Break'}</span>
+                <span>{formatTime(pomodoroTimeLeft)}</span>
+              </div>
+              <Progress value={getPomodoroProgress()} className="h-2" />
+            </div>
+          )}
+        </div>
+
+        <Separator />
+        
+        <div className="flex items-center justify-between">
+            <Label htmlFor="sound-toggle" className="font-bold text-lg">
+              Enable Sound Notifications
+            </Label>
+            <Switch
+              id="sound-toggle"
+              checked={soundEnabled}
+              onCheckedChange={setSoundEnabled}
+            />
+        </div>
+
+        <Separator />
+        
+        <div className="space-y-8">
+          {reminders.map((reminder) => (
+            <div key={reminder.id} className="space-y-4">
+              <div className="flex items-start gap-4">
+                <reminder.icon className="h-6 w-6 text-accent mt-1" />
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor={`switch-${reminder.id}`} className="font-bold text-lg">
+                      {reminder.title}
+                    </Label>
+                    <Switch
+                      id={`switch-${reminder.id}`}
+                      checked={reminder.enabled}
+                      onCheckedChange={(checked) => handleToggle(reminder.id, checked)}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {reminder.description}
+                  </p>
+                  <div className="flex items-center gap-4 mt-4">
+                    <Label htmlFor={`select-${reminder.id}`} className="text-sm">Frequency:</Label>
+                    <Select
+                      value={String(reminder.frequency)}
+                      onValueChange={(value) => handleFrequencyChange(reminder.id, value)}
+                      disabled={!reminder.enabled}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Set frequency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {reminder.frequencies.map((freq) => (
+                          <SelectItem key={freq} value={String(freq)}>
+                            Every {freq} minutes
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
+              <Progress value={reminder.enabled ? reminder.progress : 0} className="h-2" />
             </div>
-            <Progress value={reminder.enabled ? reminder.progress : 0} className="h-2" />
-          </div>
-        ))}
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
