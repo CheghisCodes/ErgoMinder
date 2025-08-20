@@ -118,22 +118,21 @@ export default function ReminderManager() {
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   const { toast } = useToast();
-  const alertAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Initialize Audio on the client side
     if (typeof window !== "undefined") {
-      alertAudioRef.current = new Audio(
+      audioRef.current = new Audio(
         "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
       );
-      alertAudioRef.current.volume = 0.5;
+      audioRef.current.volume = 0.5;
     }
   }, []);
 
   const playSound = () => {
-    if (soundEnabled && alertAudioRef.current) {
-      alertAudioRef.current.currentTime = 0;
-      alertAudioRef.current.play().catch((e) => console.error("Error playing sound:", e));
+    if (soundEnabled && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((e) => console.error("Error playing sound:", e));
     }
   };
 
@@ -169,7 +168,6 @@ export default function ReminderManager() {
 
           if (elapsedTime >= frequencyMs) {
             triggerReminder(r.id);
-            // This will be reset inside triggerReminder's setReminders call
             return { ...r, progress: 100 };
           }
 
@@ -256,6 +254,16 @@ export default function ReminderManager() {
     setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
   };
 
+  const handleResetAllReminders = () => {
+    setReminders((prev) =>
+      prev.map((r) => ({ ...r, lastTriggered: Date.now(), progress: 0 }))
+    );
+    toast({
+      title: "Timers Reset ✨",
+      description: "All wellness reminder timers have been reset.",
+    });
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -337,6 +345,14 @@ export default function ReminderManager() {
               onCheckedChange={setSoundEnabled}
             />
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handleResetAllReminders}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" /> Reset All Timers
+          </Button>
         </div>
 
         <Separator />
