@@ -1,6 +1,5 @@
 "use client";
 
-import { AnalyzePostureOutput } from "@/ai/flows/analyze-posture";
 import { analyzePostureAction } from "@/lib/actions";
 import {
   Camera,
@@ -23,6 +22,11 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
+
+type AnalyzePostureOutput = {
+  postureAnalysis: string;
+  stretchRecommendations: string;
+};
 
 export default function AIPostureAnalysis() {
   const [stream, setStream] = useState<MediaStream | null>(null);

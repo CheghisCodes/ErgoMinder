@@ -10,10 +10,16 @@ import {
 type AnalyzePostureInput = {
   photoDataUri: string;
 };
+type AnalyzePostureOutput = {
+  postureAnalysis: string;
+  stretchRecommendations: string;
+};
+
 type TextToSpeechInput = string;
+type TextToSpeechOutput = { audioDataUri: string };
 
 
-export async function analyzePostureAction(input: AnalyzePostureInput) {
+export async function analyzePostureAction(input: AnalyzePostureInput): Promise<AnalyzePostureOutput> {
   // Add a delay to simulate network latency and show loading states.
   await new Promise((resolve) => setTimeout(resolve, 1500));
   try {
@@ -26,7 +32,7 @@ export async function analyzePostureAction(input: AnalyzePostureInput) {
   }
 }
 
-export async function textToSpeechAction(input: TextToSpeechInput) {
+export async function textToSpeechAction(input: TextToSpeechInput): Promise<TextToSpeechOutput> {
   try {
     const result = await textToSpeechFlow(input);
     return result;
