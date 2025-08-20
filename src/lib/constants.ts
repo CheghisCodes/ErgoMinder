@@ -81,3 +81,18 @@ export const postureTips: PostureTip[] = [
     icon: Repeat,
   },
 ];
+
+export const motivationalQuotes: string[] = [
+  "The secret of getting ahead is getting started.",
+  "Don't watch the clock; do what it does. Keep going.",
+  "The only way to do great work is to love what you do.",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+  "Believe you can and you're halfway there.",
+  "A little progress each day adds up to big results.",
+  "The future depends on what you do today.",
+  "Well done is better than well said.",
+  "You are capable of more than you know.",
+  "The expert in anything was once a beginner."
+];
+
+    

@@ -1,6 +1,7 @@
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
+import { motivationalQuotes } from "@/lib/constants";
 import {
   Clock,
   Eye,
@@ -172,6 +173,10 @@ export default function ReminderManager() {
     return () => clearInterval(interval);
   }, [reminders, triggerReminder]);
 
+  const getRandomQuote = () => {
+    return motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+  }
+
   useEffect(() => {
     if (pomodoroState === "idle") return;
 
@@ -181,11 +186,11 @@ export default function ReminderManager() {
           playSound();
           if (pomodoroState === "work") {
             setPomodoroState("break");
-            toast({ title: "Pomodoro: Break Time!", description: `Time to take a ${POMODORO_BREAK_MINS}-minute break.` });
+            toast({ title: "Pomodoro: Break Time! 🎉", description: getRandomQuote() });
             return POMODORO_BREAK_MINS * 60;
           } else {
             setPomodoroState("work");
-            toast({ title: "Pomodoro: Work Time!", description: `Time for a ${POMODORO_WORK_MINS}-minute focused session.` });
+            toast({ title: "Pomodoro: Focus Time! 🚀", description: getRandomQuote() });
             return POMODORO_WORK_MINS * 60;
           }
         }
@@ -227,6 +232,7 @@ export default function ReminderManager() {
     if (pomodoroState === 'idle') {
       setPomodoroState('work');
       setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
+      toast({ title: "Pomodoro: Focus Time! 🚀", description: getRandomQuote() });
     } else {
       setPomodoroState('idle');
       setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
@@ -353,3 +359,5 @@ export default function ReminderManager() {
     </Card>
   );
 }
+
+    
