@@ -1,21 +1,30 @@
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
+import { textToSpeechAction } from "@/lib/actions";
 import { motivationalQuotes } from "@/lib/constants";
 import {
   Clock,
   Eye,
   GlassWater,
-  PersonStanding,
   Grape,
-  Play,
   Pause,
+  PersonStanding,
+  Play,
   RotateCcw,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Label } from "./ui/label";
 import { Progress } from "./ui/progress";
 import {
@@ -109,24 +118,41 @@ export default function ReminderManager() {
     POMODORO_WORK_MINS * 60
   );
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [speechEnabled, setSpeechEnabled] = useState(true);
 
   const { toast } = useToast();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const alertAudioRef = useRef<HTMLAudioElement | null>(null);
+  const speechAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     // Initialize Audio on the client side
     if (typeof window !== "undefined") {
-      audioRef.current = new Audio(
+      alertAudioRef.current = new Audio(
         "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
       );
-      audioRef.current.volume = 0.5;
+      alertAudioRef.current.volume = 0.5;
+
+      speechAudioRef.current = new Audio();
+      speechAudioRef.current.volume = 1.0;
     }
   }, []);
-  
+
   const playSound = () => {
-    if (soundEnabled && audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(e => console.error("Error playing sound:", e));
+    if (soundEnabled && alertAudioRef.current) {
+      alertAudioRef.current.currentTime = 0;
+      alertAudioRef.current.play().catch((e) => console.error("Error playing sound:", e));
+    }
+  };
+
+  const speakText = async (text: string) => {
+    if (speechEnabled && speechAudioRef.current) {
+      try {
+        const { audioDataUri } = await textToSpeechAction(text);
+        speechAudioRef.current.src = audioDataUri;
+        speechAudioRef.current.play().catch((e) => console.error("Error playing speech:", e));
+      } catch (error) {
+        console.error("Error generating speech:", error);
+      }
     }
   };
 
@@ -135,6 +161,7 @@ export default function ReminderManager() {
       const reminder = reminders.find((r) => r.id === id);
       if (reminder && reminder.enabled) {
         playSound();
+        speakText(reminder.toastTitle);
         toast({
           title: reminder.toastTitle,
           description: reminder.toastDescription,
@@ -146,7 +173,7 @@ export default function ReminderManager() {
         );
       }
     },
-    [reminders, toast, soundEnabled]
+    [reminders, toast, soundEnabled, speechEnabled]
   );
 
   useEffect(() => {
@@ -162,6 +189,7 @@ export default function ReminderManager() {
 
           if (elapsedTime >= frequencyMs) {
             triggerReminder(r.id);
+            // This will be reset inside triggerReminder's setReminders call
             return { ...r, progress: 100 };
           }
 
@@ -174,8 +202,10 @@ export default function ReminderManager() {
   }, [reminders, triggerReminder]);
 
   const getRandomQuote = () => {
-    return motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
-  }
+    return motivationalQuotes[
+      Math.floor(Math.random() * motivationalQuotes.length)
+    ];
+  };
 
   useEffect(() => {
     if (pomodoroState === "idle") return;
@@ -185,12 +215,16 @@ export default function ReminderManager() {
         if (prevTime <= 1) {
           playSound();
           if (pomodoroState === "work") {
+            const toastTitle = "Pomodoro: Break Time! 🎉";
+            speakText(toastTitle);
+            toast({ title: toastTitle, description: getRandomQuote() });
             setPomodoroState("break");
-            toast({ title: "Pomodoro: Break Time! 🎉", description: getRandomQuote() });
             return POMODORO_BREAK_MINS * 60;
           } else {
+            const toastTitle = "Pomodoro: Focus Time! 🚀";
+            speakText(toastTitle);
+            toast({ title: toastTitle, description: getRandomQuote() });
             setPomodoroState("work");
-            toast({ title: "Pomodoro: Focus Time! 🚀", description: getRandomQuote() });
             return POMODORO_WORK_MINS * 60;
           }
         }
@@ -199,8 +233,7 @@ export default function ReminderManager() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [pomodoroState, toast, soundEnabled]);
-
+  }, [pomodoroState, toast, soundEnabled, speechEnabled]);
 
   const handleToggle = (id: string, checked: boolean) => {
     setReminders((prev) =>
@@ -229,32 +262,36 @@ export default function ReminderManager() {
   };
 
   const handlePomodoroToggle = () => {
-    if (pomodoroState === 'idle') {
-      setPomodoroState('work');
+    if (pomodoroState === "idle") {
+      const toastTitle = "Pomodoro: Focus Time! 🚀";
+      speakText(toastTitle);
+      toast({ title: toastTitle, description: getRandomQuote() });
+      setPomodoroState("work");
       setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
-      toast({ title: "Pomodoro: Focus Time! 🚀", description: getRandomQuote() });
     } else {
-      setPomodoroState('idle');
+      setPomodoroState("idle");
       setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
     }
   };
-  
+
   const handlePomodoroReset = () => {
-    setPomodoroState('idle');
+    setPomodoroState("idle");
     setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
   };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
   const getPomodoroProgress = () => {
-    const totalDuration = (pomodoroState === 'work' ? POMODORO_WORK_MINS : POMODORO_BREAK_MINS) * 60;
+    const totalDuration =
+      (pomodoroState === "work"
+        ? POMODORO_WORK_MINS
+        : POMODORO_BREAK_MINS) * 60;
     return ((totalDuration - pomodoroTimeLeft) / totalDuration) * 100;
   };
-
 
   return (
     <Card>
@@ -263,32 +300,45 @@ export default function ReminderManager() {
           <Clock className="h-5 w-5 text-primary" />
           Wellness Reminders
         </CardTitle>
-        <CardDescription>Customize your reminders to stay healthy and productive.</CardDescription>
+        <CardDescription>
+          Customize your reminders to stay healthy and productive.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4 p-4 rounded-lg bg-muted/50">
-           <div className="flex justify-between items-center">
-             <div className="flex-1">
+          <div className="flex justify-between items-center">
+            <div className="flex-1">
               <Label htmlFor="pomodoro-toggle" className="font-bold text-lg">
                 Pomodoro Timer
               </Label>
               <p className="text-sm text-muted-foreground">
-                {POMODORO_WORK_MINS} min work, {POMODORO_BREAK_MINS} min break sessions.
+                {POMODORO_WORK_MINS} min work, {POMODORO_BREAK_MINS} min break
+                sessions.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="icon" variant="outline" onClick={handlePomodoroToggle}>
-                {pomodoroState === 'idle' ? <Play className="h-4 w-4"/> : <Pause className="h-4 w-4"/>}
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={handlePomodoroToggle}
+              >
+                {pomodoroState === "idle" ? (
+                  <Play className="h-4 w-4" />
+                ) : (
+                  <Pause className="h-4 w-4" />
+                )}
               </Button>
-               <Button size="icon" variant="ghost" onClick={handlePomodoroReset}>
-                <RotateCcw className="h-4 w-4"/>
+              <Button size="icon" variant="ghost" onClick={handlePomodoroReset}>
+                <RotateCcw className="h-4 w-4" />
               </Button>
             </div>
           </div>
-          {pomodoroState !== 'idle' && (
+          {pomodoroState !== "idle" && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm font-medium">
-                <span className="text-primary">{pomodoroState === 'work' ? 'Work' : 'Break'}</span>
+                <span className="text-primary">
+                  {pomodoroState === "work" ? "Work" : "Break"}
+                </span>
                 <span>{formatTime(pomodoroTimeLeft)}</span>
               </div>
               <Progress value={getPomodoroProgress()} className="h-2" />
@@ -297,20 +347,34 @@ export default function ReminderManager() {
         </div>
 
         <Separator />
-        
-        <div className="flex items-center justify-between">
-            <Label htmlFor="sound-toggle" className="font-bold text-lg">
-              Enable Sound Notifications
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="sound-toggle" className="flex items-center gap-2">
+              <Volume2 className="h-5 w-5" />
+              <span className="font-bold">Enable Alert Sound</span>
             </Label>
             <Switch
               id="sound-toggle"
               checked={soundEnabled}
               onCheckedChange={setSoundEnabled}
             />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="speech-toggle" className="flex items-center gap-2">
+              <VolumeX className="h-5 w-5" />
+              <span className="font-bold">Enable Spoken Alerts</span>
+            </Label>
+            <Switch
+              id="speech-toggle"
+              checked={speechEnabled}
+              onCheckedChange={setSpeechEnabled}
+            />
+          </div>
         </div>
 
         <Separator />
-        
+
         <div className="space-y-8">
           {reminders.map((reminder) => (
             <div key={reminder.id} className="space-y-4">
@@ -318,23 +382,35 @@ export default function ReminderManager() {
                 <reminder.icon className="h-6 w-6 text-accent mt-1" />
                 <div className="flex-1">
                   <div className="flex justify-between items-center">
-                    <Label htmlFor={`switch-${reminder.id}`} className="font-bold text-lg">
+                    <Label
+                      htmlFor={`switch-${reminder.id}`}
+                      className="font-bold text-lg"
+                    >
                       {reminder.title}
                     </Label>
                     <Switch
                       id={`switch-${reminder.id}`}
                       checked={reminder.enabled}
-                      onCheckedChange={(checked) => handleToggle(reminder.id, checked)}
+                      onCheckedChange={(checked) =>
+                        handleToggle(reminder.id, checked)
+                      }
                     />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {reminder.description}
                   </p>
                   <div className="flex items-center gap-4 mt-4">
-                    <Label htmlFor={`select-${reminder.id}`} className="text-sm">Frequency:</Label>
+                    <Label
+                      htmlFor={`select-${reminder.id}`}
+                      className="text-sm"
+                    >
+                      Frequency:
+                    </Label>
                     <Select
                       value={String(reminder.frequency)}
-                      onValueChange={(value) => handleFrequencyChange(reminder.id, value)}
+                      onValueChange={(value) =>
+                        handleFrequencyChange(reminder.id, value)
+                      }
                       disabled={!reminder.enabled}
                     >
                       <SelectTrigger className="w-[180px]">
@@ -351,7 +427,10 @@ export default function ReminderManager() {
                   </div>
                 </div>
               </div>
-              <Progress value={reminder.enabled ? reminder.progress : 0} className="h-2" />
+              <Progress
+                value={reminder.enabled ? reminder.progress : 0}
+                className="h-2"
+              />
             </div>
           ))}
         </div>
@@ -359,5 +438,3 @@ export default function ReminderManager() {
     </Card>
   );
 }
-
-    
