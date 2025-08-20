@@ -44,6 +44,7 @@ type Reminder = {
   icon: LucideIcon;
   toastTitle: string;
   toastDescription: string;
+  speechText: string;
   enabled: boolean;
   frequency: number; // in minutes
   frequencies: number[];
@@ -59,6 +60,7 @@ const initialReminders: Reminder[] = [
     icon: Eye,
     toastTitle: "Time for an eye break! 👀",
     toastDescription: "Look at something 20 feet away for 20 seconds.",
+    speechText: "It's time for an eye break. Look away from your screen.",
     enabled: true,
     frequency: 20,
     frequencies: [15, 20, 25, 30],
@@ -72,6 +74,7 @@ const initialReminders: Reminder[] = [
     icon: PersonStanding,
     toastTitle: "Move your body! 🏃",
     toastDescription: "Take a short micro-break to stretch and recharge.",
+    speechText: "Time for a micro-break. Stand up and stretch.",
     enabled: true,
     frequency: 30,
     frequencies: [30, 45, 60],
@@ -85,6 +88,7 @@ const initialReminders: Reminder[] = [
     icon: GlassWater,
     toastTitle: "Stay hydrated! 💧",
     toastDescription: "Time to drink some water.",
+    speechText: "Stay hydrated. It is time to drink some water.",
     enabled: true,
     frequency: 60,
     frequencies: [45, 60, 90],
@@ -98,6 +102,7 @@ const initialReminders: Reminder[] = [
     icon: Grape,
     toastTitle: "Snack time! 🍎",
     toastDescription: "A healthy snack can boost your productivity.",
+    speechText: "It's snack time. Grab a healthy snack to keep your energy up.",
     enabled: false,
     frequency: 120,
     frequencies: [90, 120, 180],
@@ -161,7 +166,7 @@ export default function ReminderManager() {
       const reminder = reminders.find((r) => r.id === id);
       if (reminder && reminder.enabled) {
         playSound();
-        speakText(reminder.toastTitle);
+        speakText(reminder.speechText);
         toast({
           title: reminder.toastTitle,
           description: reminder.toastDescription,
@@ -216,13 +221,15 @@ export default function ReminderManager() {
           playSound();
           if (pomodoroState === "work") {
             const toastTitle = "Pomodoro: Break Time! 🎉";
-            speakText(toastTitle);
+            const speechText = "Pomodoro complete. Time for a short break. Take rest.";
+            speakText(speechText);
             toast({ title: toastTitle, description: getRandomQuote() });
             setPomodoroState("break");
             return POMODORO_BREAK_MINS * 60;
           } else {
             const toastTitle = "Pomodoro: Focus Time! 🚀";
-            speakText(toastTitle);
+            const speechText = "Break is over. Time to focus.";
+            speakText(speechText);
             toast({ title: toastTitle, description: getRandomQuote() });
             setPomodoroState("work");
             return POMODORO_WORK_MINS * 60;
@@ -264,7 +271,8 @@ export default function ReminderManager() {
   const handlePomodoroToggle = () => {
     if (pomodoroState === "idle") {
       const toastTitle = "Pomodoro: Focus Time! 🚀";
-      speakText(toastTitle);
+      const speechText = "Pomodoro started. Time to focus.";
+      speakText(speechText);
       toast({ title: toastTitle, description: getRandomQuote() });
       setPomodoroState("work");
       setPomodoroTimeLeft(POMODORO_WORK_MINS * 60);
