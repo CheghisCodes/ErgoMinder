@@ -63,21 +63,8 @@ const textToSpeechFlow = ai.defineFlow(
       config: {
         responseModalities: ['AUDIO'],
         speechConfig: {
-          multiSpeakerVoiceConfig: {
-            speakerVoiceConfigs: [
-              {
-                speaker: 'Ergo',
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                },
-              },
-              {
-                speaker: 'Minder',
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: 'Achernar' },
-                },
-              },
-            ],
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Algenib' },
           },
         },
       },
